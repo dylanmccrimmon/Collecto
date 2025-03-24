@@ -1,3 +1,35 @@
+<#PSScriptInfo
+
+.VERSION 0.1.0
+
+.GUID 7cb8f494-a4ac-4278-98c3-a345e13478f9
+
+.AUTHOR Dylan McCrimmon
+
+.COMPANYNAME Dylan McCrimmon
+
+.COPYRIGHT 2025 Dylan McCrimmon. All rights reserved.
+
+.TAGS
+
+.LICENSEURI https://github.com/dylanmccrimmon/Collecto/blob/main/LICENSE
+
+.PROJECTURI https://github.com/dylanmccrimmon/Collecto
+
+.ICONURI
+
+.EXTERNALMODULEDEPENDENCIES 
+
+.REQUIREDSCRIPTS
+
+.EXTERNALSCRIPTDEPENDENCIES
+
+.RELEASENOTES
+Initial beta version.
+
+.PRIVATEDATA
+
+#>
 param(
     [Parameter(Mandatory=$true)]
     [System.String]

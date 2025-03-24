@@ -1,5 +1,9 @@
 # Collecto
 
+> [!CAUTION]
+> This project is in its **beta phase** and may undergo significant changes. Use with care in production environments.
+>
+
 **Collecto** is a powerful PowerShell script designed to gather detailed hardware, software, and security information from Windows devices. Built for IT administrators, MSPs, and network managers, it provides a quick and automated way to inventory devices, check Windows 11 readiness, and capture hardware hashes for Intune registration. **Collecto** supports on-demand execution, scheduled reporting, and periodic check-ins—ensuring up-to-date insights without storing any data locally. With near no dependency on external PowerShell modules, it leverages CIM commands for efficient and direct system querying, making it efficient and highly compatible across Windows environments.
 
 ## 🚀 Features
@@ -95,7 +99,8 @@ Run the script with the required parameters:
 - Enhancements based on community feedback.
 
 ## 📚 License
-The license is yet to be decided. If you have suggestions, feel free to open an issue.
+This project is licensed under the [MIT License](LICENSE).  
+Feel free to use, modify, and share it — just include attribution.
 
 ---
 
