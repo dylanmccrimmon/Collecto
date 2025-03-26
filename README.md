@@ -38,6 +38,8 @@ Run the script with the required parameters:
 | `-CheckInURL`   | (Optional) API endpoint to check-in first to check if data collection is required.   | ❌ No    |
 
 ### Example Output (JSON)
+The output includes a **unique_device_id_hash**, which is a consistent, anonymized identifier used to recognize a physical device across reinstalls and resets.
+You can [learn more about how it's generated](Docs/Unique%20Device%20ID%20Hash.md) and what makes it reliable.
 ```json
 {
     "unique_device_id_hash": "28EB2A2502B5E9508C5DE255668FEDC9265F8084E1CA631CFAC88AC1E4479543",
