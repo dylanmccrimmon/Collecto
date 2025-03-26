@@ -484,11 +484,17 @@ $CIM_PhysicalDisk = Get-CimInstance -Namespace "Root/Microsoft/Windows/Storage" 
 $CIM_LogicalDisk = Get-CimInstance Win32_LogicalDisk
 $CIM_DiskPartition = Get-CimInstance Win32_DiskPartition
 $CIM_LogicalDiskToPartition = Get-CimInstance Win32_LogicalDiskToPartition
+$CIM_Battery = Get-CimInstance Win32_Battery
+if ($Null -ne $CIM_Battery) {
+    $WMI_BatteryStaticData = Get-WmiObject -Namespace "ROOT\WMI" -ClassName "BatteryStaticData"
+    $CIM_BatteryFullChargedCapacity = Get-CimInstance -Namespace "ROOT\WMI" -ClassName "BatteryFullChargedCapacity"
+    $CIM_BatteryCycleCount = Get-CimInstance -Namespace "ROOT\WMI" -ClassName "BatteryCycleCount"
+}
+$CIM_NetFirewallProfile = Get-CimInstance -Namespace "root/StandardCimv2" -ClassName "MSFT_NetFirewallProfile"
 #endregion
 
 #region Function calls
 $FN_NetAdapter = Get-NetAdapter
-$FN_NetFirewallProfiles = Get-NetFirewallProfile
 $FN_HardwareHash = Get-HardwareHash
 $FN_ManagementState = Get-DeviceState
 $FN_SecureBootStatus = Get-SecureBootStatus
@@ -509,37 +515,75 @@ $ENV_FirmwareType = [System.Environment]::GetEnvironmentVariable('firmware_type'
 
 #region Compute values
 ## CPU Architecture
-switch ($CIM_Processor.Architecture) {
-    0 {
-        $CV_ProcessorArchitecture = "x86"
+
+
+$CV_Processors = @()
+foreach ($Processor in $CIM_Processor) {
+
+    $ProcessorArchitecture = switch ($CIM_Processor.Architecture) {
+        0 {
+            "x86"
+        }
+        1 {
+            "MIPS"
+        }
+        2 {
+            "Alpha"
+        }
+        3 {
+            "PowerPC"
+        }
+        6 {
+            "ia64"
+        }
+        9 {
+            "x64"
+        }
+        Default {
+            "Unknown"
+        }
     }
-    1 {
-        $CV_ProcessorArchitecture = "MIPS"
-    }
-    2 {
-        $CV_ProcessorArchitecture = "Alpha"
-    }
-    3 {
-        $CV_ProcessorArchitecture = "PowerPC"
-    }
-    6 {
-        $CV_ProcessorArchitecture = "ia64"
-    }
-    9 {
-        $CV_ProcessorArchitecture = "x64"
-    }
-    Default {
-        $CV_ProcessorArchitecture = "Unknown"
+
+
+    $CV_Processors += [PSCustomObject]@{
+        "name"           = $Processor.Name
+        "manufacturer"   = $Processor.Manufacturer
+        "architecture"   = $ProcessorArchitecture
+        "base_frequency_ghz"  = [math]::Round($Processor.MaxClockSpeed / 1000, 2)
+        "total_cores"    = $Processor.NumberOfCores
+        "total_threads"  = $Processor.NumberOfLogicalProcessors
     }
 }
+
+
 
 ## Memory
 $CV_MemoryTotal = [math]::round(($CIM_PhysicalMemory.Capacity | Measure-Object -Sum).sum / 1GB, 0)
 
 ## Network Adapters
-$CV_EthernetNetworkAdapters = $FN_NetAdapter | Where-Object {$_.NdisPhysicalMedium -eq 14}
-$CV_WiFiNetworkAdapters = $FN_NetAdapter | Where-Object {$_.NdisPhysicalMedium -eq 9}
-$CV_BluetoothNetworkAdapters = $FN_NetAdapter | Where-Object {$_.NdisPhysicalMedium -eq 10}
+$CV_NetworkAdapters = @()
+foreach ($Adapter in $FN_NetAdapter | Where-Object {$_.NdisPhysicalMedium -eq 14}) {
+    $CV_NetworkAdapters += [PSCustomObject]@{
+        "type"         = "Ethernet"
+        "mac_address"  = $Adapter.MacAddress
+        "description"  = $Adapter.InterfaceDescription
+    }
+} 
+foreach ($Adapter in $FN_NetAdapter | Where-Object {$_.NdisPhysicalMedium -eq 9}) {
+    $CV_NetworkAdapters += [PSCustomObject]@{
+        "type"         = "WiFi"
+        "mac_address"  = $Adapter.MacAddress
+        "description"  = $Adapter.InterfaceDescription
+    }
+} 
+foreach ($Adapter in $FN_NetAdapter | Where-Object {$_.NdisPhysicalMedium -eq 10}) {
+    $CV_NetworkAdapters += [PSCustomObject]@{
+        "type"         = "Bluetooth"
+        "mac_address"  = $Adapter.MacAddress
+        "description"  = $Adapter.InterfaceDescription
+    }
+} 
+
 
 # OS Locale
 $CV_OperatingSystemLocale = New-Object System.Globalization.CultureInfo([Convert]::ToInt32($CIM_OperatingSystem.Locale, 16))
@@ -562,6 +606,32 @@ $CV_OSLogicalToPartition = $CIM_LogicalDiskToPartition | Where-Object { $_.Depen
 $CV_OSDiskPartition = $CIM_DiskPartition | Where-Object { $_.DeviceID -eq (($CV_OSLogicalToPartition.Antecedent -split '"')[1]) }
 $CV_OSPhysicalDisk = $CIM_PhysicalDisk | Where-Object { $_.DeviceID -eq $CV_OSDiskPartition.DiskIndex  }
 
+# Battery
+$CV_HasBattery = $null -ne $CIM_Battery
+if ($CV_HasBattery) {
+
+    $CVBatteryChemistry = switch ($CIM_Battery.Chemistry) {
+        1 {  "Other" }
+        2 { "Unknown" }
+        3 { "Lead Acid" }
+        4 { "Nickel Cadmium" }
+        5 { "Nickel Metal Hydride" }
+        6 { "Lithium-ion" }
+        7 { "Zinc air" }
+        8 { "Lithium Polymer" }
+        default { "Unknown" }
+    }
+
+} else {
+    $CVBatteryChemistry = $null
+}
+
+# Firewall
+$CV_FirewallStatus = switch (($CIM_NetFirewallProfile | Where-Object {$_.Enabled -eq $true}).count) {
+    3 { "Enabled" }
+    0 { "Disabled" }
+    default { "Partially Enabled" }
+}
 
 # Sometimes the output will be a string or sometimes a number... account for both.
 switch ($CV_OSPhysicalDisk.MediaType) {
@@ -828,66 +898,97 @@ $Windows11ReadinessFailedChecks = $Windows11ReadinessFailedChecks -join ","
 # Gather details into a object
 $Data = [PSCustomObject]@{
     "unique_device_id_hash" = $FN_UniqueDeviceIDHash
-
-    "customer_name" = $CustomerName
+    "organisation_name" = $CustomerName
     "site_name" = $SiteName
 
-    "computer_name" = $CIM_ComputerSystem.Name
+    "device_info" = [PSCustomObject]@{
+        "hostname"            = $CIM_ComputerSystem.Name
+        "management_state"    = $FN_ManagementState
+        "management_provider" = $null
+    }
 
-    "windows_activation_status" = $FN_WindowsActivationStatus.Status
-    "windows_activation_type" = $FN_WindowsActivationStatus.Method
-    "windows_original_product_key" = $CV_WindowsOriginalProductKey 
-    "windows_original_product_key_description" = $CV_WindowsOriginalProductKeyDescription
+    "os" = [PSCustomObject]@{
+        "platform"         = "Windows"
+        "version"          = $CIM_OperatingSystem.Version
+        "version_display"  = $REG_OSDisplayVersion
+        "edition"          = $FN_OperatingSystemSKUName
+        "sku"              = $CIM_OperatingSystem.Caption
+        "language"         = $CV_OperatingSystemLocale.DisplayName
+        "architecture"     = $CIM_OperatingSystem.OSArchitecture
+        "activation"       = [PSCustomObject]@{
+            "status"                    = $FN_WindowsActivationStatus.Status
+            "type"                      = $FN_WindowsActivationStatus.Method
+            "oem_product_key"           = $CV_WindowsOriginalProductKey 
+            "oem_product_key_description" = $CV_WindowsOriginalProductKeyDescription
+        }
+    }
 
-    "operating_system" = "Windows"
-    "operating_system_version" = $CIM_OperatingSystem.Version
-    "operating_system_display_version" = $REG_OSDisplayVersion
-    "operating_system_language" = $CV_OperatingSystemLocale.DisplayName
-    "operating_system_edition" = $FN_OperatingSystemSKUName
-    "operating_system_sku" = $CIM_OperatingSystem.Caption
+    "hardware" = [PSCustomObject]@{
+        "manufacturer"  = $CIM_ComputerSystem.Manufacturer
+        "family"        = $CIM_ComputerSystem.SystemFamily
+        "model"         = $CIM_ComputerSystem.Model
+        "type"          = $CV_DeviceType
+        "serial_number" = $CIM_BIOS.SerialNumber
+        "cpu" = $CV_Processors
+        "ram" = [PSCustomObject]@{
+            "installed_gb"      = $CV_MemoryTotal
+            "speed_mhz"         = $CIM_PhysicalMemory.speed
+        }
+        "storage" = [PSCustomObject]@{
+            "os_disk" = [PSCustomObject]@{
+                "type"     = $CV_OSPhysicalDiskType
+                "size_gb"  = [math]::round($CV_OSPhysicalDisk.Size / 1Gb, 0)
+            }
+            "os_volume" = [PSCustomObject]@{
+                "free_gb"       = [math]::round($CV_OSLogicalDisk.FreeSpace / 1Gb, 0)
+                "total_gb"      = [math]::round($CV_OSLogicalDisk.Size / 1Gb, 0)
+                "file_system"   =  $CV_OSLogicalDisk.FileSystem 
+            }
+        }
+        "battery" = [PSCustomObject]@{
+            "present"               = $CV_HasBattery
+            "cycle_count"           = if ($CV_HasBattery) { $CIM_BatteryCycleCount.CycleCount } else { $null }
+            "health_percentage"     = if ($CV_HasBattery) { [math]::Round(($CIM_BatteryFullChargedCapacity.FullChargedCapacity / $WMI_BatteryStaticData.DesignedCapacity) * 100) } else { $null }
+            "designed_capacity_whr" = if ($CV_HasBattery) { [math]::Round($WMI_BatteryStaticData.DesignedCapacity / 1000) } else { $null }
+            "current_capacity_whr"  = if ($CV_HasBattery) { [math]::Round($CIM_BatteryFullChargedCapacity.FullChargedCapacity / 1000) } else { $null }
+            "chemistry"             = if ($CV_HasBattery) { $CVBatteryChemistry } else { $null }
+            "manufacturer"          = if ($CV_HasBattery) { $WMI_BatteryStaticData.ManufactureName } else { $null }
+            "serial_number"         = if ($CV_HasBattery) { $WMI_BatteryStaticData.SerialNumber } else { $null }
+        }
+        "firmware" = [PSCustomObject]@{
+            "type"          = $ENV_FirmwareType
+            "version"       = $CIM_BIOS.SMBIOSBIOSVersion
+            "manufacturer"  = $CIM_BIOS.Manufacturer
+        }
+        "network_adapters" = $CV_NetworkAdapters
+    }
 
-    "storage_total_space_gb" = [math]::round($CV_OSLogicalDisk.Size / 1Gb, 0)
-    "storage_free_space_gb" = [math]::round($CV_OSLogicalDisk.FreeSpace / 1Gb, 0)
-    "operating_system_disk_size_gb" = [math]::round($CV_OSPhysicalDisk.Size / 1Gb, 0)
-    "operating_system_disk_type" = $CV_OSPhysicalDiskType
-
-    "physical_memory_total_gb" = $CV_MemoryTotal
-
-    "device_manufacturer" = $CIM_ComputerSystem.Manufacturer
-    "device_family" = $CIM_ComputerSystem.SystemFamily
-    "device_model" = $CIM_ComputerSystem.Model
-    "device_type" = $CV_DeviceType
+    "security" = [PSCustomObject]@{
+        "security_chip" = [PSCustomObject]@{
+            "present"               = $FN_TPMDetails.Presence
+            "type"                  = "TPM"
+            "version"               = $FN_TPMDetails.TPMVersion
+            "manufacturer_id"       = $FN_TPMDetails.ManufacturerId
+            "manufacturer_version"  = $FN_TPMDetails.ManufacturerVersion
+        }
+        "secure_boot" = $FN_SecureBootStatus
+        "os_encryption" = [PSCustomObject]@{
+            "status" = $FN_EncryptionStatus
+            "method" = ""
+        }
+        "antivirus" = $FN_AntiVirusProducts
+        "firewall_status" = $CV_FirewallStatus
+    }
     
-    "processor" = $CIM_Processor.Name -join "," 
-    "processor_count" = $CIM_ComputerSystem.NumberOfProcessors
-    "processor_logical_count" = $CIM_ComputerSystem.NumberOfLogicalProcessors
-    "processor_architecture" = $CV_ProcessorArchitecture
-
-    "tpm_present" = $FN_TPMDetails.Presence
-    "tpm_version" = $FN_TPMDetails.TPMVersion
-    "tpm_manufacturer_id" = $FN_TPMDetails.ManufacturerId
-    "tpm_manufacturer_version" = $FN_TPMDetails.ManufacturerVersion
-
-    "secure_boot_status" = $FN_SecureBootStatus
-
-    "bios_manufacturer" = $CIM_BIOS.Manufacturer
-    "bios_serial_number" = $CIM_BIOS.SerialNumber
-    "bios_version" = $CIM_BIOS.SMBIOSBIOSVersion
-    "bios_firmware_type" = $ENV_FirmwareType
-
-    "wifi_mac" = $CV_WiFiNetworkAdapters.MACAddress -join ","
-    "ethernet_mac" = $CV_EthernetNetworkAdapters.MACAddress -join ","
-
-    "encryption_status" = $FN_EncryptionStatus
-    "anti_virus_products" = $FN_AntiVirusProducts -join ","
-    "firewall_domain_profile_status" = if (($FN_NetFirewallProfiles | Where-Object {$_.Name -eq 'Domain'}).Enabled) { "Enabled" } else { "Disabled" }
-    "firewall_private_profile_status" = if (($FN_NetFirewallProfiles | Where-Object {$_.Name -eq 'Private'}).Enabled) { "Enabled" } else { "Disabled" }
-    "firewall_public_profile_status" = if (($FN_NetFirewallProfiles | Where-Object {$_.Name -eq 'Public'}).Enabled) { "Enabled" } else { "Disabled" }
-
-    "windows_11_readiness" = $Windows11Readiness
-    "windows_11_readiness_failed_checks" = $Windows11ReadinessFailedChecks -join ","
-    "management_state" = $FN_ManagementState
-    "hardware_hash" = $FN_HardwareHash
+    "platform_specific" = [PSCustomObject]@{
+        "windows" = [PSCustomObject]@{
+            "autopilot_hardware_hash" = $FN_HardwareHash
+            "windows_11_readiness" = [PSCustomObject]@{
+                "status"         = $Windows11Readiness
+                "failed_checks"  = $Windows11ReadinessFailedChecks
+            }
+        }
+    }
 }
 
 # Convert the data to JSON
