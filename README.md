@@ -42,52 +42,120 @@ The output includes a **unique_device_id_hash**, which is a consistent, anonymiz
 You can [learn more about how it's generated](Docs/Unique%20Device%20ID%20Hash.md) and what makes it reliable.
 ```json
 {
-    "unique_device_id_hash": "28EB2A2502B5E9508C5DE255668FEDC9265F8084E1CA631CFAC88AC1E4479543",
-    "customer_name": "Acme Corp",
-    "site_name": "London Office",
-    "computer_name": "DESKTOP-12345",
-    "windows_activation_type": "Volume:MAK",
-    "windows_original_product_key": "*****-*****-*****-*****-63CJB",
-    "windows_original_product_key_description": "[4.0] ProfessionalEducation OEM:DM",
-    "operating_system": "Windows",
-    "operating_system_version": "10.0.19042",
-    "operating_system_display_version": "20H2",
-    "operating_system_language": "English (United Kingdom)",
-    "operating_system_edition": "EDUCATION",
-    "operating_system_sku": "Microsoft Windows 10 Education",
-    "storage_total_space_gb": 57,
-    "storage_free_space_gb": 15,
-    "operating_system_disk_size_gb": 58,
-    "operating_system_disk_type": "SSD",
-    "physical_memory_total_gb": 4,
-    "device_manufacturer": "Dell Inc.",
-    "device_family": "Latitude",
-    "device_model": "Latitude 3190",
-    "device_type": "Laptop",
-    "processor": "Intel(R) Celeron(R) N4120 CPU @ 1.10GHz",
-    "processor_count": 1,
-    "processor_logical_count": 4,
-    "processor_architecture": "x64",
-    "tpm_present": "Present",
-    "tpm_version": "2.0",
-    "tpm_manufacturer_id": "INTC",
-    "tpm_manufacturer_version": "403.0.0.0",
-    "secure_boot_status": "Enabled",
-    "bios_manufacturer": "Dell Inc.",
-    "bios_serial_number": "ABC123",
-    "bios_version": "1.12.2",
-    "bios_firmware_type": "UEFI",
-    "wifi_mac": "DC-41-A9-2A-7A-74",
-    "ethernet_mac": "",
-    "encryption_status": "No Protection",
-    "anti_virus_products": "Sophos Anti-Virus,Windows Defender",
-    "firewall_domain_profile_status": "Enabled",
-    "firewall_private_profile_status": "Enabled",
-    "firewall_public_profile_status": "Enabled",
-    "windows_11_readiness": "Not Ready",
-    "windows_11_readiness_failed_checks": "OS Disk Size",
-    "management_state": "Domain Joined",
-    "hardware_hash": "T0HFAwEAHAA....."
+  "unique_device_id_hash": "50297CF6717C9A1089D6597E062ADDEBDCB8841BC410764FBF0A119B7C171D54",
+  "organisation_name": "Acme Corp",
+  "site_name": "London Office",
+  "device_info": {
+    "hostname": "DESKTOP-NAGRSK3",
+    "management_state": "Standalone"
+  },
+  "os": {
+    "platform": "Windows",
+    "version": "10.0.22631",
+    "version_display": "23H2",
+    "edition": "EDUCATION",
+    "sku": "Microsoft Windows 11 Education",
+    "language": "English (United States)",
+    "architecture": "64-bit",
+    "activation": {
+      "status": "Licensed",
+      "type": "Volume:GVLK",
+      "oem_product_key": "None found",
+      "oem_product_key_description": ""
+    }
+  },
+  "hardware": {
+    "manufacturer": "Dell Inc.",
+    "family": "Latitude",
+    "model": "Latitude 3190",
+    "type": "Desktop",
+    "serial_number": "VMware-56 4d 95 9e",
+    "cpu": [
+      {
+        "name": "Intel(R) N100",
+        "manufacturer": "GenuineIntel",
+        "architecture": "x64",
+        "base_frequency_ghz": 0.81,
+        "total_cores": 1,
+        "total_threads": 1
+      },
+      {
+        "name": "Intel(R) N100",
+        "manufacturer": "GenuineIntel",
+        "architecture": "x64",
+        "base_frequency_ghz": 0.81,
+        "total_cores": 1,
+        "total_threads": 1
+      }
+    ],
+    "ram": {
+      "installed_gb": 8,
+      "speed_mhz": 2400
+    },
+    "storage": {
+      "os_disk": {
+        "type": "SSD",
+        "size_gb": 100
+      },
+      "os_volume": {
+        "free_gb": 41,
+        "total_gb": 99,
+        "file_system": "NTFS"
+      }
+    },
+    "battery": {
+      "present": true,
+      "cycle_count": 46,
+      "health_percentage": 88,
+      "designed_capacity_whr": 42,
+      "current_capacity_whr": 37,
+      "chemistry": "Unknown",
+      "manufacturer": "SMP",
+      "serial_number": "317"
+    },
+    "firmware": {
+      "type": "UEFI",
+      "version": "1.12.2",
+      "manufacturer": "Dell Inc."
+    },
+    "network_adapters": [
+      {
+        "type": "Ethernet",
+        "mac_address": "00-00-00-00-00-00",
+        "description": "Intel(R) 82574L Gigabit Network Connection"
+      },
+      {
+        "type": "Wi-Fi",
+        "mac": "DC-00-00-00-00-00",
+        "description": "Intel Dual Band Wireless-AC 8265"
+      }
+    ]
+  },
+  "security": {
+    "security_chip": {
+      "present": "Present",
+      "type": "TPM",
+      "version": "2.0",
+      "manufacturer_id": "INTC",
+      "manufacturer_version": "403.0.0.0"
+    },
+    "secure_boot": "Enabled",
+    "os_encryption": {
+      "status": "No Protection",
+      "method": null
+    },
+    "antivirus": "Windows Defender",
+    "firewall_status": "Enabled"
+  },
+  "platform_specific": {
+    "windows": {
+      "autopilot_hardware_hash": "T0GnAgEAHAAAAAoA3hJdWAAAC....",
+      "windows_11_readiness": {
+        "status": "Not Ready",
+        "failed_checks": "CPU Clock Speed,CPU Logical Cores"
+      }
+    }
+  }
 }
 ```
 

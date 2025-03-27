@@ -42,7 +42,7 @@ param(
     $ReportingURL,
     [Parameter(Mandatory=$false)]
     [System.String]
-    $CheckInURL
+    $CheckInURL = $null
 )
 
 # Check if the script is running as administrator
@@ -135,7 +135,7 @@ $CIM_BIOS = Get-CimInstance Win32_BIOS
 $CIM_BaseBoard = Get-CimInstance Win32_BaseBoard
 $FN_UniqueDeviceIDHash = Get-UniqueDeviceIDHash -BaseBoardSerialNumber $CIM_BaseBoard.SerialNumber -BIOSManufacturer $CIM_BIOS.Manufacturer -BIOSModel $CIM_BIOS.Model -BIOSSerialNumber $CIM_BIOS.SerialNumber
 
-if ($null -ne $CheckInURL) {
+if (!($null -eq $CheckInURL)) {
     $CheckInResult = Invoke-CheckIn -CheckInURL $CheckInURL -UniqueDeviceIDHash $FN_UniqueDeviceIDHash
 
     if ($CheckInResult.Report) {
@@ -149,8 +149,6 @@ if ($null -ne $CheckInURL) {
         }
 
         Write-Verbose "The check-in server did not request a report."
-
-
     }
 }
 #endregion
@@ -520,7 +518,7 @@ $ENV_FirmwareType = [System.Environment]::GetEnvironmentVariable('firmware_type'
 $CV_Processors = @()
 foreach ($Processor in $CIM_Processor) {
 
-    $ProcessorArchitecture = switch ($CIM_Processor.Architecture) {
+    $ProcessorArchitecture = switch ($Processor.Architecture) {
         0 {
             "x86"
         }
@@ -554,8 +552,6 @@ foreach ($Processor in $CIM_Processor) {
         "total_threads"  = $Processor.NumberOfLogicalProcessors
     }
 }
-
-
 
 ## Memory
 $CV_MemoryTotal = [math]::round(($CIM_PhysicalMemory.Capacity | Measure-Object -Sum).sum / 1GB, 0)
@@ -634,33 +630,33 @@ $CV_FirewallStatus = switch (($CIM_NetFirewallProfile | Where-Object {$_.Enabled
 }
 
 # Sometimes the output will be a string or sometimes a number... account for both.
-switch ($CV_OSPhysicalDisk.MediaType) {
+$CV_OSPhysicalDiskType = switch ($CV_OSPhysicalDisk.MediaType) {
     3 {
-        $CV_OSPhysicalDiskType = "HDD"
+         "HDD"
     }
     4 {
-        $CV_OSPhysicalDiskType = "SSD"
+        "SSD"
     }
     5 {
-        $CV_OSPhysicalDiskType = "SCM"
+        "SCM"
     }
     0 {
-        $CV_OSPhysicalDiskType = "Unspecified"
+        "Unspecified"
     }
     'HDD' {
-        $CV_OSPhysicalDiskType = "HDD"
+        "HDD"
     }
     'SSD' {
-        $CV_OSPhysicalDiskType = "SSD"
+        "SSD"
     }
     'SCM' {
-        $CV_OSPhysicalDiskType = "SCM"
+        "SCM"
     }
     'Unspecified' {
-        $CV_OSPhysicalDiskType = "Unspecified"
+        "Unspecified"
     }
     Default {
-        $CV_OSPhysicalDiskType = "Unknown"
+        "Unknown"
     }
 }
 
@@ -904,7 +900,6 @@ $Data = [PSCustomObject]@{
     "device_info" = [PSCustomObject]@{
         "hostname"            = $CIM_ComputerSystem.Name
         "management_state"    = $FN_ManagementState
-        "management_provider" = $null
     }
 
     "os" = [PSCustomObject]@{
@@ -974,12 +969,12 @@ $Data = [PSCustomObject]@{
         "secure_boot" = $FN_SecureBootStatus
         "os_encryption" = [PSCustomObject]@{
             "status" = $FN_EncryptionStatus
-            "method" = ""
+            "method" = if ($FN_EncryptionStatus -in @("Protection On (Fully Encrypted)", "Protection Off (Not Encrypted)")) { "BitLocker" } else { $null }
         }
         "antivirus" = $FN_AntiVirusProducts
         "firewall_status" = $CV_FirewallStatus
     }
-    
+
     "platform_specific" = [PSCustomObject]@{
         "windows" = [PSCustomObject]@{
             "autopilot_hardware_hash" = $FN_HardwareHash
