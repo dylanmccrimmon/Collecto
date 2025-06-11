@@ -667,7 +667,7 @@ $CV_OSPhysicalDiskType = switch ($CV_OSPhysicalDisk.MediaType) {
 $Windows11ReadinessFailedChecks = @() # Array to store failed checks
 
 # Set the minimum requirements for Windows 11 readiness checks
-[int]$Win11ReadinessMinOSDiskSizeGB = 64
+[int]$Win11ReadinessMinOSDiskSizeGB = 58 #64 - Changed to 58GB to account for losses
 [int]$Win11ReadinessMinMemoryGB = 4
 [Uint32]$Win11ReadinessMinClockSpeedMHz = 1000
 [Uint32]$Win11ReadinessMinLogicalCores = 2
